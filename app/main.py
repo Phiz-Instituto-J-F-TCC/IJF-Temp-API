@@ -48,20 +48,23 @@ async def verificar_tipo_usuario(numero_phiz: str):
     Retorna a qual tipo de usuário (aluno, professor ou coordenador) um número do Phiz pertence.
     """
     pool = await get_connection()
-    async with pool.connection() as conn:
-        # Verifica se é Aluno
-        cur = await conn.execute('SELECT 1 FROM "Aluno" WHERE "numero_phiz" = %s', (numero_phiz,))
-        if await cur.fetchone():
-            return {"tipo": "aluno"}
-        
-        # Verifica se é Professor
-        cur = await conn.execute('SELECT 1 FROM "Professor" WHERE "numero_phiz" = %s', (numero_phiz,))
-        if await cur.fetchone():
-            return {"tipo": "professor"}
-            
-        # Verifica se é Coordenador
-        cur = await conn.execute('SELECT 1 FROM "Coordenador" WHERE "numero_phiz" = %s', (numero_phiz,))
-        if await cur.fetchone():
-            return {"tipo": "coordenador"}
+    if pool is None:
+        raise HTTPException(status_code=500, detail="Pool de conexões não inicializado.")
 
-        raise HTTPException(status_code=404, detail="Número não pertence a nenhum usuário.")
+    # Ordem de verificação: Coordenador → Professor → Aluno
+    tabelas = [
+        ("Coordenador", "coordenador"),
+        ("Professor", "professor"),
+        ("Aluno", "aluno"),
+    ]
+
+    async with pool.connection() as conn:
+        for tabela, tipo in tabelas:
+            cur = await conn.execute(
+                f'SELECT 1 FROM "{tabela}" WHERE "numero_phiz" = %s',
+                (numero_phiz,),
+            )
+            if await cur.fetchone():
+                return {"tipo": tipo}
+
+    raise HTTPException(status_code=404, detail="Número não pertence a nenhum usuário.")
