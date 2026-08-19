@@ -248,7 +248,7 @@ async def professor_materia(numero_phiz: str, sala: str, materia: str):
 # ============================
 
 @router.get("/aluno", response_model=ProfessorAlunoResponse)
-async def professor_aluno(numero_phiz: str, sala: str, materia: str, numero_phiz_aluno: str):
+async def professor_aluno(numero_phiz: str, sala: str, materia: str, nome_aluno: str):
     """
     Relatório detalhado de um aluno específico em uma matéria.
     Valida se o professor leciona essa matéria e se o aluno pertence à sala.
@@ -264,12 +264,12 @@ async def professor_aluno(numero_phiz: str, sala: str, materia: str, numero_phiz
 
         # Buscar aluno
         cur = await conn.execute(
-            'SELECT "id", "nome" FROM "Aluno" WHERE "numero_phiz" = %s',
-            (numero_phiz_aluno,),
+            'SELECT "id", "nome" FROM "Aluno" WHERE "nome" LIKE %s',
+            (f"%{nome_aluno}%",),
         )
         aluno = await cur.fetchone()
         if not aluno:
-            raise HTTPException(status_code=404, detail="Aluno não encontrado com esse número PhizLink.")
+            raise HTTPException(status_code=404, detail="Aluno não encontrado.")
 
         # Validar que o aluno pertence à sala
         cur = await conn.execute(
