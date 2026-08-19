@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import create_pool, close_pool
+from app.database import create_pool, close_pool, get_connection
 from app.routers import link, aluno, professor, coordenador
 
 
@@ -40,3 +40,28 @@ app.include_router(coordenador.router)
 @app.get("/", tags=["Root"])
 async def root():
     return {"mensagem": "PhizLink API está rodando.", "docs": "/docs"}
+
+
+@app.get("/tipo-usuario/{numero_phiz}", tags=["Geral"])
+async def verificar_tipo_usuario(numero_phiz: str):
+    """
+    Retorna a qual tipo de usuário (aluno, professor ou coordenador) um número do Phiz pertence.
+    """
+    pool = await get_connection()
+    async with pool.connection() as conn:
+        # Verifica se é Aluno
+        cur = await conn.execute('SELECT 1 FROM "Aluno" WHERE "numero_phiz" = %s', (numero_phiz,))
+        if await cur.fetchone():
+            return {"tipo": "aluno"}
+        
+        # Verifica se é Professor
+        cur = await conn.execute('SELECT 1 FROM "Professor" WHERE "numero_phiz" = %s', (numero_phiz,))
+        if await cur.fetchone():
+            return {"tipo": "professor"}
+            
+        # Verifica se é Coordenador
+        cur = await conn.execute('SELECT 1 FROM "Coordenador" WHERE "numero_phiz" = %s', (numero_phiz,))
+        if await cur.fetchone():
+            return {"tipo": "coordenador"}
+
+        raise HTTPException(status_code=404, detail="Número não pertence a nenhum usuário.")
