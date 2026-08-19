@@ -1,8 +1,8 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database import create_pool, close_pool
+from app.database import create_pool, close_pool, get_connection
 from app.routers import link, aluno, professor, coordenador
 
 
@@ -40,3 +40,31 @@ app.include_router(coordenador.router)
 @app.get("/", tags=["Root"])
 async def root():
     return {"mensagem": "PhizLink API está rodando.", "docs": "/docs"}
+
+
+@app.get("/tipo-usuario/{numero_phiz}", tags=["Geral"])
+async def verificar_tipo_usuario(numero_phiz: str):
+    """
+    Retorna a qual tipo de usuário (aluno, professor ou coordenador) um número do Phiz pertence.
+    """
+    pool = await get_connection()
+    if pool is None:
+        raise HTTPException(status_code=500, detail="Pool de conexões não inicializado.")
+
+    # Ordem de verificação: Coordenador → Professor → Aluno
+    tabelas = [
+        ("Coordenador", "coordenador"),
+        ("Professor", "professor"),
+        ("Aluno", "aluno"),
+    ]
+
+    async with pool.connection() as conn:
+        for tabela, tipo in tabelas:
+            cur = await conn.execute(
+                f'SELECT 1 FROM "{tabela}" WHERE "numero_phiz" = %s',
+                (numero_phiz,),
+            )
+            if await cur.fetchone():
+                return {"tipo": tipo}
+
+    raise HTTPException(status_code=404, detail="Número não pertence a nenhum usuário.")
