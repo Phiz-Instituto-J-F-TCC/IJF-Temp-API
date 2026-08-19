@@ -246,7 +246,7 @@ async def coordenador_materia(numero_phiz: str, sala: str, materia: str):
 # ============================
 
 @router.get("/aluno", response_model=ProfessorAlunoResponse)
-async def coordenador_aluno(numero_phiz: str, sala: str, materia: str, numero_phiz_aluno: str):
+async def coordenador_aluno(numero_phiz: str, sala: str, materia: str, nome_aluno: str):
     """
     Relatório detalhado de um aluno em uma matéria. Sem verificação de vínculo.
     """
@@ -258,8 +258,8 @@ async def coordenador_aluno(numero_phiz: str, sala: str, materia: str, numero_ph
         id_sala_materia = info["id_sala_materia"]
 
         cur = await conn.execute(
-            'SELECT "id", "nome" FROM "Aluno" WHERE "numero_phiz" = %s',
-            (numero_phiz_aluno,),
+            'SELECT "id", "nome" FROM "Aluno" WHERE "nome" LIKE %s',
+            (f"%{nome_aluno}%",),
         )
         aluno = await cur.fetchone()
         if not aluno:
@@ -453,7 +453,7 @@ async def coordenador_sala(numero_phiz: str, id_sala: int):
 # ============================
 
 @router.get("/aluno/geral", response_model=CoordenadorAlunoGeralResponse)
-async def coordenador_aluno_geral(numero_phiz: str, numero_phiz_aluno: str):
+async def coordenador_aluno_geral(numero_phiz: str, nome_aluno: str):
     """
     Visão geral completa de um aluno: todas matérias, notas e presença.
     """
@@ -463,8 +463,8 @@ async def coordenador_aluno_geral(numero_phiz: str, numero_phiz_aluno: str):
         coordenador = await _buscar_coordenador(conn, numero_phiz)
 
         cur = await conn.execute(
-            'SELECT "id", "nome" FROM "Aluno" WHERE "numero_phiz" = %s',
-            (numero_phiz_aluno,),
+            'SELECT "id", "nome" FROM "Aluno" WHERE "nome" LIKE %s',
+            (f"%{nome_aluno}%",),
         )
         aluno = await cur.fetchone()
         if not aluno:
