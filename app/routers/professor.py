@@ -18,7 +18,7 @@ router = APIRouter(prefix="/professor", tags=["Professor"])
 # ============================
 
 async def _buscar_professor(conn, numero_phiz: str):
-    """Busca professor pelo numero_phiz."""
+    """Busca professor pelo numero_phiz."""    
     cur = await conn.execute(
         'SELECT "id", "nome" FROM "Professor" WHERE "numero_phiz" = %s',
         (numero_phiz,),
@@ -179,6 +179,8 @@ async def professor_materia(numero_phiz: str, sala: str, materia: str):
     """
     pool = await get_connection()
 
+    numero_phiz = numero_phiz.replace("%2B", "+")
+
     async with pool.connection() as conn:
         professor = await _buscar_professor(conn, numero_phiz)
         info = await _buscar_sala_materia(conn, sala, materia)
@@ -254,6 +256,8 @@ async def professor_aluno(numero_phiz: str, sala: str, materia: str, nome_aluno:
     Valida se o professor leciona essa matéria e se o aluno pertence à sala.
     """
     pool = await get_connection()
+
+    numero_phiz = numero_phiz.replace("%2B", "+")
 
     async with pool.connection() as conn:
         professor = await _buscar_professor(conn, numero_phiz)

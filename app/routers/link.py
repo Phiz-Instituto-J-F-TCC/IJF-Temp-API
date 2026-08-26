@@ -31,7 +31,7 @@ async def linkar_phiz(data: LinkarPhizRequest):
             if row:
                 await conn.execute(
                     f'UPDATE "{tabela}" SET "numero_phiz" = %s WHERE "id" = %s',
-                    (data.numero_phiz, row["id"]),
+                    (data.numero_phiz.replace("%2B", "+"), row["id"]),
                 )
                 return LinkarPhizResponse(
                     mensagem=f"Número PhizLink vinculado com sucesso ao {tipo}.",

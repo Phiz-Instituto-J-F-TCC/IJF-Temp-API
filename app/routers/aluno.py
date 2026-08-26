@@ -58,6 +58,8 @@ async def aluno_notas(numero_phiz: str):
     """
     pool = await get_connection()
 
+    numero_phiz = numero_phiz.replace("%2B", "+")
+
     async with pool.connection() as conn:
         aluno = await _buscar_aluno(conn, numero_phiz)
 
@@ -166,6 +168,8 @@ async def aluno_presenca(numero_phiz: str):
     quais teve presença e quais faltou, com relatório de porcentagem.
     """
     pool = await get_connection()
+
+    numero_phiz = numero_phiz.replace("%2B", "+")
 
     async with pool.connection() as conn:
         aluno = await _buscar_aluno(conn, numero_phiz)
