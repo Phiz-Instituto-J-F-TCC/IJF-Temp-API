@@ -18,6 +18,10 @@ async def create_pool():
         min_size=2,
         max_size=10,
         kwargs={"row_factory": dict_row},
+        check=AsyncConnectionPool.check_connection,
+        max_lifetime=300,
+        max_idle=60,
+        reconnect_timeout=30,
     )
     await pool.open()
 
