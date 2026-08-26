@@ -166,6 +166,8 @@ async def coordenador_materia(numero_phiz: str, sala: str, materia: str):
     """
     pool = await get_connection()
 
+    numero_phiz = numero_phiz.replace("%2B", "+")
+
     async with pool.connection() as conn:
         coordenador = await _buscar_coordenador(conn, numero_phiz)
         info = await _buscar_sala_materia(conn, sala, materia)
@@ -251,6 +253,8 @@ async def coordenador_aluno(numero_phiz: str, sala: str, materia: str, nome_alun
     Relatório detalhado de um aluno em uma matéria. Sem verificação de vínculo.
     """
     pool = await get_connection()
+
+    numero_phiz = numero_phiz.replace("%2B", "+")
 
     async with pool.connection() as conn:
         coordenador = await _buscar_coordenador(conn, numero_phiz)
@@ -385,6 +389,8 @@ async def coordenador_sala(numero_phiz: str, id_sala: int):
     """
     pool = await get_connection()
 
+    numero_phiz = numero_phiz.replace("%2B", "+")
+
     async with pool.connection() as conn:
         coordenador = await _buscar_coordenador(conn, numero_phiz)
 
@@ -458,6 +464,8 @@ async def coordenador_aluno_geral(numero_phiz: str, nome_aluno: str):
     Visão geral completa de um aluno: todas matérias, notas e presença.
     """
     pool = await get_connection()
+
+    numero_phiz = numero_phiz.replace("%2B", "+")
 
     async with pool.connection() as conn:
         coordenador = await _buscar_coordenador(conn, numero_phiz)

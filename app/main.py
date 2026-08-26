@@ -47,6 +47,8 @@ async def verificar_tipo_usuario(numero_phiz: str):
     """
     Retorna a qual tipo de usuário (aluno, professor ou coordenador) um número do Phiz pertence.
     """
+    numero_phiz = numero_phiz.replace("%2B", "+")
+    
     pool = await get_connection()
     if pool is None:
         raise HTTPException(status_code=500, detail="Pool de conexões não inicializado.")
