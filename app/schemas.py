@@ -70,6 +70,14 @@ class AlunoPresencaResponse(BaseModel):
     relatorio: RelatorioPresenca
 
 
+# --- Aluno / Número Phiz por CPF ---
+
+class AlunoPhizPorCpfResponse(BaseModel):
+    aluno: str
+    cpf: str
+    numero_phiz: str
+
+
 # --- Professor / Matéria ---
 
 class AlunoResumoProfessor(BaseModel):

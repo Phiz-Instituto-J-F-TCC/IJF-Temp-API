@@ -8,6 +8,7 @@ from app.schemas import (
     AlunoPresencaResponse,
     AulaPresenca,
     RelatorioPresenca,
+    AlunoPhizPorCpfResponse,
 )
 
 router = APIRouter(prefix="/aluno", tags=["Aluno"])
@@ -38,6 +39,11 @@ def _calcular_media_ponderada(notas_rows) -> float | None:
     if soma_pesos == 0:
         return 0.0
     return round(soma_ponderada / soma_pesos, 2)
+
+
+def _normalizar_cpf(cpf: str) -> str:
+    """Mantém apenas dígitos para permitir busca com ou sem pontuação."""
+    return "".join(ch for ch in cpf if ch.isdigit())
 
 
 # ============================
@@ -234,4 +240,42 @@ async def aluno_presenca(numero_phiz: str):
                 total_faltas=total_faltas,
                 porcentagem_presenca=porcentagem,
             ),
+        )
+
+
+# ============================
+# GET /aluno/numero-phiz-por-cpf
+# ============================
+
+@router.get("/numero-phiz-por-cpf", response_model=AlunoPhizPorCpfResponse)
+async def aluno_numero_phiz_por_cpf(cpf: str):
+    """
+    Retorna o número PhizLink de um aluno a partir do CPF.
+    Aceita CPF com ou sem pontuação.
+    """
+    cpf_normalizado = _normalizar_cpf(cpf)
+    if len(cpf_normalizado) != 11:
+        raise HTTPException(status_code=400, detail="CPF inválido. Informe um CPF com 11 dígitos.")
+
+    pool = await get_connection()
+
+    async with pool.connection() as conn:
+        cur = await conn.execute(
+            '''
+            SELECT "nome", "cpf", "numero_phiz"
+            FROM "Aluno"
+            WHERE regexp_replace("cpf", '[^0-9]', '', 'g') = %s
+            LIMIT 1
+            ''',
+            (cpf_normalizado,),
+        )
+        aluno = await cur.fetchone()
+
+        if not aluno:
+            raise HTTPException(status_code=404, detail="Aluno não encontrado para o CPF informado.")
+
+        return AlunoPhizPorCpfResponse(
+            aluno=aluno["nome"],
+            cpf=aluno["cpf"],
+            numero_phiz=aluno["numero_phiz"],
         )
