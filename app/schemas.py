@@ -146,3 +146,53 @@ class CoordenadorAlunoGeralResponse(BaseModel):
     materias: list[MateriaNotas]
     presenca_geral: RelatorioPresenca
     relatorio: RelatorioNotas
+
+
+# --- Coordenador / Análises gerais ---
+
+class CoordenadorAlunoAnaliseResumo(BaseModel):
+    aluno: str
+    numero_phiz: str | None
+    sala: str
+    media_geral: float | None
+    porcentagem_presenca: float | None
+    materias_avaliadas: int
+
+
+class RelatorioCoordenadorAlunos(BaseModel):
+    total_alunos: int
+    alunos_com_notas: int
+    alunos_com_presenca: int
+    media_geral: float | None
+    porcentagem_presenca_geral: float | None
+    media_mais_alta: float | None
+    media_mais_baixa: float | None
+
+
+class CoordenadorAlunosGeralResponse(BaseModel):
+    coordenador: str
+    alunos: list[CoordenadorAlunoAnaliseResumo]
+    relatorio: RelatorioCoordenadorAlunos
+
+
+class CoordenadorSalaAnaliseResumo(BaseModel):
+    sala: str
+    total_alunos: int
+    media_geral: float | None
+    porcentagem_presenca: float | None
+
+
+class RelatorioCoordenadorSerie(BaseModel):
+    total_salas: int
+    total_alunos: int
+    alunos_com_notas: int
+    alunos_com_presenca: int
+    media_geral: float | None
+    porcentagem_presenca_geral: float | None
+
+
+class CoordenadorSerieGeralResponse(BaseModel):
+    coordenador: str
+    serie: int
+    salas: list[CoordenadorSalaAnaliseResumo]
+    relatorio: RelatorioCoordenadorSerie
