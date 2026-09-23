@@ -69,7 +69,7 @@ async def aluno_notas(numero_phiz: str):
             SELECT s."id"
             FROM "Aluno_Sala" als
             JOIN "Sala" s ON s."id" = als."id_sala"
-            WHERE als."id_aluno" = %s AND als."atual" = TRUE
+            WHERE als."id_aluno" = %s AND s."atual" = TRUE
             """,
             (aluno["id"],),
         )
@@ -180,7 +180,7 @@ async def aluno_presenca(numero_phiz: str):
             SELECT s."id", s."ano", s."letra"
             FROM "Aluno_Sala" als
             JOIN "Sala" s ON s."id" = als."id_sala"
-            WHERE als."id_aluno" = %s AND als."atual" = TRUE
+            WHERE als."id_aluno" = %s AND s."atual" = TRUE
             """,
             (aluno["id"],),
         )
