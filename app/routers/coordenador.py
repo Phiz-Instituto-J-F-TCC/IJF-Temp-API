@@ -192,7 +192,8 @@ async def coordenador_materia(numero_phiz: str, sala: str, materia: str):
             SELECT al."id", al."nome", al."numero_phiz"
             FROM "Aluno" al
             JOIN "Aluno_Sala" als ON als."id_aluno" = al."id"
-            WHERE als."id_sala" = %s AND als."atual" = TRUE
+            JOIN "Sala" s ON als."id_sala" = s."id" 
+            WHERE als."id_sala" = %s AND s."atual" = TRUE
             ORDER BY al."nome"
             """,
             (info["id_sala"],),
@@ -272,8 +273,9 @@ async def coordenador_aluno(numero_phiz: str, sala: str, materia: str, nome_alun
         # Validar que o aluno pertence à sala e está ativo (atual = TRUE)
         cur = await conn.execute(
             """
-            SELECT 1 FROM "Aluno_Sala"
-            WHERE "id_aluno" = %s AND "id_sala" = %s AND "atual" = TRUE
+            SELECT 1 FROM "Aluno_Sala" als
+            JOIN "Sala" s ON s."id" = als."id_sala"
+            WHERE als."id_aluno" = %s AND als."id_sala" = %s AND s."atual" = TRUE
             """,
             (aluno["id"], info["id_sala"]),
         )
@@ -335,7 +337,7 @@ async def coordenador_aluno(numero_phiz: str, sala: str, materia: str, nome_alun
 
         # Média da turma
         cur = await conn.execute(
-            'SELECT "id_aluno" FROM "Aluno_Sala" WHERE "id_sala" = %s AND "atual" = TRUE',
+            'SELECT "id_aluno" FROM "Aluno_Sala" als JOIN "Sala" s ON als."id_sala" = s."id" WHERE als."id_sala" = %s AND s."atual" = TRUE',
             (info["id_sala"],),
         )
         alunos_sala = await cur.fetchall()
@@ -420,7 +422,8 @@ async def coordenador_sala(numero_phiz: str, id_sala: int):
             """
             SELECT als."id_aluno"
             FROM "Aluno_Sala" als
-            WHERE als."id_sala" = %s AND als."atual" = TRUE
+            JOIN "Sala" s ON als."id_sala" = s."id"
+            WHERE als."id_sala" = %s AND s."atual" = TRUE
             """,
             (id_sala,),
         )
@@ -484,7 +487,7 @@ async def coordenador_aluno_geral(numero_phiz: str, nome_aluno: str):
             SELECT s."id", s."ano", s."letra"
             FROM "Aluno_Sala" als
             JOIN "Sala" s ON s."id" = als."id_sala"
-            WHERE als."id_aluno" = %s AND als."atual" = TRUE
+            WHERE als."id_aluno" = %s AND s."atual" = TRUE
             """,
             (aluno["id"],),
         )

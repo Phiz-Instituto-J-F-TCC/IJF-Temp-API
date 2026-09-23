@@ -194,7 +194,7 @@ async def professor_materia(numero_phiz: str, sala: str, materia: str):
             SELECT al."id", al."nome", al."numero_phiz"
             FROM "Aluno" al
             JOIN "Aluno_Sala" als ON als."id_aluno" = al."id"
-            WHERE als."id_sala" = %s AND als."atual" = TRUE
+            WHERE als."id_sala" = %s AND s."atual" = TRUE
             ORDER BY al."nome"
             """,
             (info["id_sala"],),
@@ -278,8 +278,9 @@ async def professor_aluno(numero_phiz: str, sala: str, materia: str, nome_aluno:
         # Validar que o aluno pertence à sala
         cur = await conn.execute(
             """
-            SELECT 1 FROM "Aluno_Sala"
-            WHERE "id_aluno" = %s AND "id_sala" = %s AND "atual" = TRUE
+            SELECT 1 FROM "Aluno_Sala" als
+            JOIN "Sala" s ON s."id" = als."id_sala"
+            WHERE als."id_aluno" = %s AND als."id_sala" = %s AND s."atual" = TRUE
             """,
             (aluno["id"], info["id_sala"]),
         )
@@ -346,7 +347,7 @@ async def professor_aluno(numero_phiz: str, sala: str, materia: str, nome_aluno:
             """
             SELECT als."id_aluno"
             FROM "Aluno_Sala" als
-            WHERE als."id_sala" = %s AND als."atual" = TRUE
+            WHERE als."id_sala" = %s AND s."atual" = TRUE
             """,
             (info["id_sala"],),
         )
