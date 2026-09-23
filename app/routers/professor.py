@@ -194,6 +194,7 @@ async def professor_materia(numero_phiz: str, sala: str, materia: str):
             SELECT al."id", al."nome", al."numero_phiz"
             FROM "Aluno" al
             JOIN "Aluno_Sala" als ON als."id_aluno" = al."id"
+            JOIN "Sala" s ON als."id_sala" = s."id"
             WHERE als."id_sala" = %s AND s."atual" = TRUE
             ORDER BY al."nome"
             """,
@@ -347,6 +348,7 @@ async def professor_aluno(numero_phiz: str, sala: str, materia: str, nome_aluno:
             """
             SELECT als."id_aluno"
             FROM "Aluno_Sala" als
+            JOIN "Sala" s ON als."id_sala" = s."id"
             WHERE als."id_sala" = %s AND s."atual" = TRUE
             """,
             (info["id_sala"],),
