@@ -14,6 +14,12 @@ from app.schemas import (
     MateriaNotas,
     RelatorioNotas,
     RelatorioPresenca,
+    CoordenadorAlunoAnaliseResumo,
+    RelatorioCoordenadorAlunos,
+    CoordenadorAlunosGeralResponse,
+    CoordenadorSalaAnaliseResumo,
+    RelatorioCoordenadorSerie,
+    CoordenadorSerieGeralResponse,
 )
 
 router = APIRouter(prefix="/coordenador", tags=["Coordenador"])
@@ -600,5 +606,160 @@ async def coordenador_aluno_geral(numero_phiz: str, nome_aluno: str):
             relatorio=RelatorioNotas(
                 media_geral=media_geral,
                 medias_por_materia=medias_por_materia,
+            ),
+        )
+
+
+# ============================
+# GET /coordenador/alunos/geral
+# ============================
+
+async def _buscar_analise_alunos(conn, filtro_ano: int | None = None):
+    """Calcula o resumo acadêmico de cada aluno em sua sala atual."""
+    where_ano = 'AND s."ano" = %s' if filtro_ano is not None else ""
+    params = (filtro_ano,) if filtro_ano is not None else ()
+
+    cur = await conn.execute(
+        f"""
+        SELECT al."id", al."nome", al."numero_phiz",
+               s."id" AS id_sala, s."ano", s."letra"
+        FROM "Aluno" al
+        JOIN "Aluno_Sala" als ON als."id_aluno" = al."id"
+        JOIN "Sala" s ON s."id" = als."id_sala"
+        WHERE s."atual" = TRUE 
+        ORDER BY s."ano", s."letra", al."nome"
+        """,
+        params,
+    )
+    alunos = await cur.fetchall()
+    analises = []
+
+    for aluno in alunos:
+        cur = await conn.execute(
+            'SELECT "id" FROM "Sala_Materia" WHERE "id_sala" = %s',
+            (aluno["id_sala"],),
+        )
+        sala_materias = await cur.fetchall()
+
+        medias = []
+        total_aulas = 0
+        total_presencas = 0
+        materias_avaliadas = 0
+
+        for sala_materia in sala_materias:
+            media = await _calcular_media_aluno_na_materia(
+                conn, aluno["id"], sala_materia["id"],
+            )
+            if media is not None:
+                medias.append(media)
+                materias_avaliadas += 1
+
+            cur = await conn.execute(
+                'SELECT COUNT(*) AS cnt FROM "Aula" WHERE "id_sala_materia" = %s',
+                (sala_materia["id"],),
+            )
+            total_aulas += (await cur.fetchone())["cnt"]
+
+            cur = await conn.execute(
+                """
+                SELECT COUNT(*) AS cnt
+                FROM "Presenca" p
+                JOIN "Aula" au ON au."id" = p."id_aula"
+                WHERE p."id_aluno" = %s AND au."id_sala_materia" = %s
+                """,
+                (aluno["id"], sala_materia["id"]),
+            )
+            total_presencas += (await cur.fetchone())["cnt"]
+
+        analises.append({
+            "aluno": aluno["nome"],
+            "numero_phiz": aluno["numero_phiz"],
+            "sala": f'{aluno["ano"]}{aluno["letra"]}',
+            "media_geral": round(sum(medias) / len(medias), 2) if medias else None,
+            "porcentagem_presenca": round((total_presencas / total_aulas) * 100, 2)
+            if total_aulas else None,
+            "materias_avaliadas": materias_avaliadas,
+            "total_aulas": total_aulas,
+            "total_presencas": total_presencas,
+        })
+
+    return analises
+
+
+def _consolidar_analise_alunos(analises: list[dict]):
+    medias = [a["media_geral"] for a in analises if a["media_geral"] is not None]
+    total_aulas = sum(a["total_aulas"] for a in analises)
+    total_presencas = sum(a["total_presencas"] for a in analises)
+    return RelatorioCoordenadorAlunos(
+        total_alunos=len(analises),
+        alunos_com_notas=len(medias),
+        alunos_com_presenca=sum(1 for a in analises if a["total_aulas"] > 0),
+        media_geral=round(sum(medias) / len(medias), 2) if medias else None,
+        porcentagem_presenca_geral=round((total_presencas / total_aulas) * 100, 2)
+        if total_aulas else None,
+        media_mais_alta=max(medias) if medias else None,
+        media_mais_baixa=min(medias) if medias else None,
+    )
+
+
+@router.get("/alunos/geral", response_model=CoordenadorAlunosGeralResponse)
+async def coordenador_alunos_geral(numero_phiz: str):
+    """Analisa todos os alunos em suas salas atuais."""
+    pool = await get_connection()
+    numero_phiz = numero_phiz.replace("%2B", "+")
+
+    async with pool.connection() as conn:
+        coordenador = await _buscar_coordenador(conn, numero_phiz)
+        analises = await _buscar_analise_alunos(conn)
+        return CoordenadorAlunosGeralResponse(
+            coordenador=coordenador["nome"],
+            alunos=[CoordenadorAlunoAnaliseResumo(**a) for a in analises],
+            relatorio=_consolidar_analise_alunos(analises),
+        )
+
+
+# ============================
+# GET /coordenador/serie/geral
+# ============================
+
+@router.get("/serie/geral", response_model=CoordenadorSerieGeralResponse)
+async def coordenador_serie_geral(numero_phiz: str, ano: int):
+    """Analisa todas as salas e alunos de uma série atual."""
+    if ano < 1:
+        raise HTTPException(status_code=400, detail="A série deve ser um número positivo.")
+
+    pool = await get_connection()
+    numero_phiz = numero_phiz.replace("%2B", "+")
+
+    async with pool.connection() as conn:
+        coordenador = await _buscar_coordenador(conn, numero_phiz)
+        analises = await _buscar_analise_alunos(conn, ano)
+        salas = {}
+        for analise in analises:
+            sala = salas.setdefault(analise["sala"], [])
+            sala.append(analise)
+
+        salas_list = []
+        for nome_sala, alunos_sala in salas.items():
+            relatorio_sala = _consolidar_analise_alunos(alunos_sala)
+            salas_list.append(CoordenadorSalaAnaliseResumo(
+                sala=nome_sala,
+                total_alunos=relatorio_sala.total_alunos,
+                media_geral=relatorio_sala.media_geral,
+                porcentagem_presenca=relatorio_sala.porcentagem_presenca_geral,
+            ))
+
+        relatorio = _consolidar_analise_alunos(analises)
+        return CoordenadorSerieGeralResponse(
+            coordenador=coordenador["nome"],
+            serie=ano,
+            salas=salas_list,
+            relatorio=RelatorioCoordenadorSerie(
+                total_salas=len(salas_list),
+                total_alunos=relatorio.total_alunos,
+                alunos_com_notas=relatorio.alunos_com_notas,
+                alunos_com_presenca=relatorio.alunos_com_presenca,
+                media_geral=relatorio.media_geral,
+                porcentagem_presenca_geral=relatorio.porcentagem_presenca_geral,
             ),
         )

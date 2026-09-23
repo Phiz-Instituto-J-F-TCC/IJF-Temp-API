@@ -52,36 +52,39 @@ IJF-Temp-API-PhizLink/
 
 ## Endpoints Disponíveis
 
-| Método | Rota | Descrição |
-|--------|------|-----------|
-| POST | `/linkar-phiz` | Vincula PhizNumber a Coordenador/Professor/Aluno |
-| GET | `/aluno/notas` | Notas da sala atual + relatório (média geral, por matéria) |
-| GET | `/aluno/presenca` | Presença da sala atual + relatório (% participação) |
-| GET | `/professor/materia` | Relatório da turma numa matéria (recebe `sala` e `materia`) |
-| GET | `/professor/aluno` | Relatório individual na sala atual (recebe `sala`, `materia` e `nome_aluno`) |
-| GET | `/coordenador/materia` | Igual professor/materia, sem restrição de vínculo do professor |
-| GET | `/coordenador/aluno` | Igual professor/aluno (recebe `sala`, `materia` e `nome_aluno`), validando sala atual do aluno |
-| GET | `/coordenador/sala` | Visão geral de todas as matérias de uma sala |
-| GET | `/coordenador/aluno/geral` | Visão completa do aluno (recebe `nome_aluno`) (todas as matérias + presença da sala atual) |
-| GET | `/` | Health check |
+| Método | Rota                       | Descrição                                                                                      |
+| ------ | -------------------------- | ---------------------------------------------------------------------------------------------- |
+| POST   | `/linkar-phiz`             | Vincula PhizNumber a Coordenador/Professor/Aluno                                               |
+| GET    | `/aluno/notas`             | Notas da sala atual + relatório (média geral, por matéria)                                     |
+| GET    | `/aluno/presenca`          | Presença da sala atual + relatório (% participação)                                            |
+| GET    | `/professor/materia`       | Relatório da turma numa matéria (recebe `sala` e `materia`)                                    |
+| GET    | `/professor/aluno`         | Relatório individual na sala atual (recebe `sala`, `materia` e `nome_aluno`)                   |
+| GET    | `/coordenador/materia`     | Igual professor/materia, sem restrição de vínculo do professor                                 |
+| GET    | `/coordenador/aluno`       | Igual professor/aluno (recebe `sala`, `materia` e `nome_aluno`), validando sala atual do aluno |
+| GET    | `/coordenador/sala`        | Visão geral de todas as matérias de uma sala                                                   |
+| GET    | `/coordenador/aluno/geral` | Visão completa do aluno (recebe `nome_aluno`) (todas as matérias + presença da sala atual)     |
+| GET    | `/`                        | Health check                                                                                   |
 
 ---
 
 ## Como Rodar
 
 1. Criar `.env` com a connection string do NeonDB:
+
    ```
    DATABASE_URL=postgresql://user:pass@ep-xxxx.us-east-2.aws.neon.tech/dbname?sslmode=require
    ```
 
 2. Instalar dependências:
+
    ```bash
    pip install -r requirements.txt
    ```
 
 3. Rodar:
+
    ```bash
-   uvicorn app.main:app --reload
+   python run.py
    ```
 
 4. Acessar Swagger UI: `http://localhost:8000/docs`

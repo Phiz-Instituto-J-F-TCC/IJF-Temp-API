@@ -180,6 +180,23 @@ Parâmetros de query:
 - numero_phiz
 - nome_aluno
 
+#### GET /coordenador/alunos/geral
+
+Analisa todos os alunos em suas salas atuais, com média e presença individuais e consolidadas.
+
+Parâmetros de query:
+
+- numero_phiz
+
+#### GET /coordenador/serie/geral
+
+Analisa uma série atual, agrupando os resultados por sala e apresentando o consolidado da série.
+
+Parâmetros de query:
+
+- numero_phiz
+- ano (por exemplo: 1, 2 ou 3)
+
 ## Observações
 
 - A documentação interativa pode ser acessada em /docs.
