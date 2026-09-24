@@ -196,3 +196,32 @@ class CoordenadorSerieGeralResponse(BaseModel):
     serie: int
     salas: list[CoordenadorSalaAnaliseResumo]
     relatorio: RelatorioCoordenadorSerie
+
+
+class CoordenadorMateriaSalaAnalise(BaseModel):
+    sala: str
+    total_alunos: int
+    alunos_com_notas: int
+    media_turma: float | None
+    porcentagem_presenca: float | None
+    nota_mais_alta: float | None
+    nota_mais_baixa: float | None
+
+
+class RelatorioCoordenadorMateria(BaseModel):
+    total_salas: int
+    total_alunos: int
+    alunos_com_notas: int
+    media_geral: float | None
+    porcentagem_presenca_geral: float | None
+    media_mais_alta: float | None
+    media_mais_baixa: float | None
+    sala_com_maior_media: str | None
+    sala_com_menor_media: str | None
+
+
+class CoordenadorMateriaGeralResponse(BaseModel):
+    coordenador: str
+    materia: str
+    salas: list[CoordenadorMateriaSalaAnalise]
+    relatorio: RelatorioCoordenadorMateria
