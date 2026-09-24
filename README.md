@@ -151,6 +151,15 @@ Parâmetros de query:
 - sala
 - materia
 
+#### GET /coordenador/materia/geral
+
+Resumo completo de uma matéria em todas as salas atuais, com médias por sala e relatório consolidado.
+
+Parâmetros de query:
+
+- numero_phiz
+- materia
+
 #### GET /coordenador/aluno
 
 Relatório detalhado de um aluno em uma matéria.

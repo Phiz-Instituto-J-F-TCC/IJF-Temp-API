@@ -20,6 +20,9 @@ from app.schemas import (
     CoordenadorSalaAnaliseResumo,
     RelatorioCoordenadorSerie,
     CoordenadorSerieGeralResponse,
+    CoordenadorMateriaSalaAnalise,
+    RelatorioCoordenadorMateria,
+    CoordenadorMateriaGeralResponse,
 )
 
 router = APIRouter(prefix="/coordenador", tags=["Coordenador"])
@@ -761,5 +764,156 @@ async def coordenador_serie_geral(numero_phiz: str, ano: int):
                 alunos_com_presenca=relatorio.alunos_com_presenca,
                 media_geral=relatorio.media_geral,
                 porcentagem_presenca_geral=relatorio.porcentagem_presenca_geral,
+            ),
+        )
+
+
+# ============================
+# GET /coordenador/materia/geral
+# ============================
+
+@router.get("/materia/geral", response_model=CoordenadorMateriaGeralResponse)
+async def coordenador_materia_geral(numero_phiz: str, materia: str):
+    """Resume uma matéria em todas as salas atuais que a oferecem."""
+    pool = await get_connection()
+    numero_phiz = numero_phiz.replace("%2B", "+")
+
+    async with pool.connection() as conn:
+        coordenador = await _buscar_coordenador(conn, numero_phiz)
+
+        cur = await conn.execute(
+            """
+            SELECT "id", "nome"
+            FROM "Materia"
+            WHERE unaccent("nome") ILIKE unaccent(%s)
+            ORDER BY "nome"
+            """,
+            (materia.strip(),),
+        )
+        materias = await cur.fetchall()
+        if not materias:
+            raise HTTPException(status_code=404, detail=f"Matéria '{materia}' não encontrada.")
+
+        materia_normalizada = materia.strip().casefold()
+        materia_row = next(
+            (item for item in materias if item["nome"].casefold() == materia_normalizada),
+            materias[0],
+        )
+
+        cur = await conn.execute(
+            """
+            SELECT sm."id" AS id_sala_materia,
+                   s."id" AS id_sala,
+                   s."ano",
+                   s."letra"
+            FROM "Sala_Materia" sm
+            JOIN "Sala" s ON s."id" = sm."id_sala"
+            WHERE sm."id_materia" = %s AND s."atual" = TRUE
+            ORDER BY s."ano", s."letra"
+            """,
+            (materia_row["id"],),
+        )
+        sala_materias = await cur.fetchall()
+        if not sala_materias:
+            raise HTTPException(
+                status_code=404,
+                detail=f"A matéria '{materia_row['nome']}' não é lecionada em nenhuma sala atual.",
+            )
+
+        salas = []
+        todas_medias = []
+        todas_presencas = []
+        total_alunos = 0
+        total_alunos_com_notas = 0
+        total_aulas = 0
+        total_presencas = 0
+
+        for sala_materia in sala_materias:
+            cur = await conn.execute(
+                """
+                SELECT al."id"
+                FROM "Aluno" al
+                JOIN "Aluno_Sala" als ON als."id_aluno" = al."id"
+                WHERE als."id_sala" = %s
+                ORDER BY al."nome"
+                """,
+                (sala_materia["id_sala"],),
+            )
+            alunos = await cur.fetchall()
+
+            medias = []
+            presencas = []
+            sala_total_aulas = 0
+            sala_total_presencas = 0
+
+            cur = await conn.execute(
+                'SELECT COUNT(*) AS cnt FROM "Aula" WHERE "id_sala_materia" = %s',
+                (sala_materia["id_sala_materia"],),
+            )
+            sala_total_aulas = (await cur.fetchone())["cnt"]
+
+            for aluno in alunos:
+                media_aluno = await _calcular_media_aluno_na_materia(
+                    conn, aluno["id"], sala_materia["id_sala_materia"],
+                )
+                if media_aluno is not None:
+                    medias.append(media_aluno)
+
+                cur = await conn.execute(
+                    """
+                    SELECT COUNT(*) AS cnt
+                    FROM "Presenca" p
+                    JOIN "Aula" au ON au."id" = p."id_aula"
+                    WHERE p."id_aluno" = %s AND au."id_sala_materia" = %s
+                    """,
+                    (aluno["id"], sala_materia["id_sala_materia"]),
+                )
+                presencas_aluno = (await cur.fetchone())["cnt"]
+                sala_total_presencas += presencas_aluno
+                if sala_total_aulas:
+                    presencas.append(round((presencas_aluno / sala_total_aulas) * 100, 2))
+
+            media_turma = round(sum(medias) / len(medias), 2) if medias else None
+            presenca_turma = round(sum(presencas) / len(presencas), 2) if presencas else None
+            nome_sala = f'{sala_materia["ano"]}{sala_materia["letra"]}'
+            salas.append({
+                "sala": nome_sala,
+                "total_alunos": len(alunos),
+                "alunos_com_notas": len(medias),
+                "media_turma": media_turma,
+                "porcentagem_presenca": presenca_turma,
+                "nota_mais_alta": max(medias) if medias else None,
+                "nota_mais_baixa": min(medias) if medias else None,
+                "total_aulas": sala_total_aulas,
+                "total_presencas": sala_total_presencas,
+            })
+
+            total_alunos += len(alunos)
+            total_alunos_com_notas += len(medias)
+            total_aulas += sala_total_aulas * len(alunos)
+            total_presencas += sala_total_presencas
+            todas_medias.extend(medias)
+            todas_presencas.extend(presencas)
+
+        salas_com_media = [sala for sala in salas if sala["media_turma"] is not None]
+        sala_maior = max(salas_com_media, key=lambda sala: sala["media_turma"]) if salas_com_media else None
+        sala_menor = min(salas_com_media, key=lambda sala: sala["media_turma"]) if salas_com_media else None
+
+        return CoordenadorMateriaGeralResponse(
+            coordenador=coordenador["nome"],
+            materia=materia_row["nome"],
+            salas=[CoordenadorMateriaSalaAnalise(**sala) for sala in salas],
+            relatorio=RelatorioCoordenadorMateria(
+                total_salas=len(salas),
+                total_alunos=total_alunos,
+                alunos_com_notas=total_alunos_com_notas,
+                media_geral=round(sum(todas_medias) / len(todas_medias), 2)
+                if todas_medias else None,
+                porcentagem_presenca_geral=round((total_presencas / total_aulas) * 100, 2)
+                if total_aulas else None,
+                media_mais_alta=max(todas_medias) if todas_medias else None,
+                media_mais_baixa=min(todas_medias) if todas_medias else None,
+                sala_com_maior_media=sala_maior["sala"] if sala_maior else None,
+                sala_com_menor_media=sala_menor["sala"] if sala_menor else None,
             ),
         )
