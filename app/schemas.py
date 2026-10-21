@@ -225,3 +225,10 @@ class CoordenadorMateriaGeralResponse(BaseModel):
     materia: str
     salas: list[CoordenadorMateriaSalaAnalise]
     relatorio: RelatorioCoordenadorMateria
+
+
+# --- Sala e Matéria ---
+
+class SalaMateriaResponse(BaseModel):
+    sala: str
+    materia: str

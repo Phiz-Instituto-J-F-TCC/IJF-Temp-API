@@ -139,6 +139,29 @@ Parâmetros de query:
 - materia
 - nome_aluno
 
+#### GET /professor/salas-materias
+
+Retorna as salas e matérias que o professor leciona, buscando pelo número Phiz.
+
+Parâmetros de query:
+
+- numero_phiz
+
+Resposta 200 (exemplo):
+
+```json
+[
+  {
+    "sala": "1A",
+    "materia": "Língua Portuguesa"
+  },
+  {
+    "sala": "1B",
+    "materia": "Língua Portuguesa"
+  }
+]
+```
+
 ### Coordenador
 
 #### GET /coordenador/materia
@@ -206,7 +229,32 @@ Parâmetros de query:
 - numero_phiz
 - ano (por exemplo: 1, 2 ou 3)
 
+#### GET /coordenador/salas-materias
+
+Retorna todas as salas e matérias cadastradas.
+
+Parâmetros de query:
+
+- numero_phiz (opcional, para validação do coordenador)
+- apenas_atuais (opcional, boolean, padrão: `true`)
+
+Resposta 200 (exemplo):
+
+```json
+[
+  {
+    "sala": "1A",
+    "materia": "Ciência de Dados"
+  },
+  {
+    "sala": "1A",
+    "materia": "Ciências"
+  }
+]
+```
+
 ## Observações
 
 - A documentação interativa pode ser acessada em /docs.
 - Endpoints com numero_phiz exigem vínculo prévio do número via /linkar-phiz.
+

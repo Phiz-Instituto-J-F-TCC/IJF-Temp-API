@@ -59,11 +59,13 @@ IJF-Temp-API-PhizLink/
 | GET    | `/aluno/presenca`            | Presença da sala atual + relatório (% participação)                                            |
 | GET    | `/professor/materia`         | Relatório da turma numa matéria (recebe `sala` e `materia`)                                    |
 | GET    | `/professor/aluno`           | Relatório individual na sala atual (recebe `sala`, `materia` e `nome_aluno`)                   |
+| GET    | `/professor/salas-materias`  | Lista as salas e matérias que o professor leciona (busca por `numero_phiz`)                    |
 | GET    | `/coordenador/materia`       | Igual professor/materia, sem restrição de vínculo do professor                                 |
 | GET    | `/coordenador/materia/geral` | Resumo da matéria em todas as salas atuais, com relatório consolidado                          |
 | GET    | `/coordenador/aluno`         | Igual professor/aluno (recebe `sala`, `materia` e `nome_aluno`), validando sala atual do aluno |
 | GET    | `/coordenador/sala`          | Visão geral de todas as matérias de uma sala                                                   |
 | GET    | `/coordenador/aluno/geral`   | Visão completa do aluno (recebe `nome_aluno`) (todas as matérias + presença da sala atual)     |
+| GET    | `/coordenador/salas-materias`| Lista todas as salas e matérias cadastradas                                                    |
 | GET    | `/`                          | Health check                                                                                   |
 
 ---
