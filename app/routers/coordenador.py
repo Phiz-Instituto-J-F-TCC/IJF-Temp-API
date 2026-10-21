@@ -23,6 +23,7 @@ from app.schemas import (
     CoordenadorMateriaSalaAnalise,
     RelatorioCoordenadorMateria,
     CoordenadorMateriaGeralResponse,
+    SalaMateriaResponse,
 )
 
 router = APIRouter(prefix="/coordenador", tags=["Coordenador"])
@@ -917,3 +918,47 @@ async def coordenador_materia_geral(numero_phiz: str, materia: str):
                 sala_com_menor_media=sala_menor["sala"] if sala_menor else None,
             ),
         )
+
+
+# ============================
+# GET /coordenador/salas-materias
+# ============================
+
+@router.get("/salas-materias", response_model=list[SalaMateriaResponse])
+@router.get("/sala-materias", response_model=list[SalaMateriaResponse], include_in_schema=False)
+async def coordenador_salas_materias(
+    numero_phiz: str | None = None,
+    apenas_atuais: bool = True,
+):
+    """
+    Retorna todas as salas e matérias cadastradas.
+    Permite opcionalmente validar o número Phiz do coordenador se fornecido.
+    """
+    pool = await get_connection()
+
+    async with pool.connection() as conn:
+        if numero_phiz:
+            numero_phiz = numero_phiz.replace("%2B", "+")
+            await _buscar_coordenador(conn, numero_phiz)
+
+        filtro_atual = 'WHERE s."atual" = TRUE' if apenas_atuais else ""
+
+        cur = await conn.execute(
+            f"""
+            SELECT CONCAT(s."ano", UPPER(TRIM(s."letra"))) AS sala, TRIM(m."nome") AS materia
+            FROM "Sala_Materia" sm
+            JOIN "Sala" s ON s."id" = sm."id_sala"
+            JOIN "Materia" m ON m."id" = sm."id_materia"
+            {filtro_atual}
+            GROUP BY s."ano", s."letra", m."nome"
+            ORDER BY s."ano", s."letra", m."nome"
+            """
+        )
+        rows = await cur.fetchall()
+        return [SalaMateriaResponse(sala=r["sala"], materia=r["materia"]) for r in rows]
+
+
+@router.get("/salas-materias/{numero_phiz}", response_model=list[SalaMateriaResponse], include_in_schema=False)
+async def coordenador_salas_materias_path(numero_phiz: str, apenas_atuais: bool = True):
+    return await coordenador_salas_materias(numero_phiz=numero_phiz, apenas_atuais=apenas_atuais)
+

@@ -8,6 +8,7 @@ from app.schemas import (
     NotaDetalhe,
     AulaPresenca,
     RelatorioProfessorAluno,
+    SalaMateriaResponse,
 )
 
 router = APIRouter(prefix="/professor", tags=["Professor"])
@@ -377,3 +378,42 @@ async def professor_aluno(numero_phiz: str, sala: str, materia: str, nome_aluno:
                 porcentagem_presenca=pres_pct,
             ),
         )
+
+
+# ============================
+# GET /professor/salas-materias
+# ============================
+
+@router.get("/salas-materias", response_model=list[SalaMateriaResponse])
+@router.get("/sala-materias", response_model=list[SalaMateriaResponse], include_in_schema=False)
+async def professor_salas_materias(numero_phiz: str):
+    """
+    Retorna as salas e matérias que o professor leciona, buscando pelo número Phiz.
+    """
+    pool = await get_connection()
+    numero_phiz = numero_phiz.replace("%2B", "+")
+
+    async with pool.connection() as conn:
+        professor = await _buscar_professor(conn, numero_phiz)
+
+        cur = await conn.execute(
+            """
+            SELECT CONCAT(s."ano", UPPER(TRIM(s."letra"))) AS sala, TRIM(m."nome") AS materia
+            FROM "Professor_Sala_Materia" psm
+            JOIN "Sala_Materia" sm ON sm."id" = psm."id_sala_materia"
+            JOIN "Sala" s ON s."id" = sm."id_sala"
+            JOIN "Materia" m ON m."id" = sm."id_materia"
+            WHERE psm."id_professor" = %s AND psm."ativo" = TRUE AND s."atual" = TRUE
+            GROUP BY s."ano", s."letra", m."nome"
+            ORDER BY s."ano", s."letra", m."nome"
+            """,
+            (professor["id"],),
+        )
+        rows = await cur.fetchall()
+        return [SalaMateriaResponse(sala=r["sala"], materia=r["materia"]) for r in rows]
+
+
+@router.get("/salas-materias/{numero_phiz}", response_model=list[SalaMateriaResponse], include_in_schema=False)
+async def professor_salas_materias_path(numero_phiz: str):
+    return await professor_salas_materias(numero_phiz=numero_phiz)
+
